@@ -1,21 +1,23 @@
 package mobile.setel.com.restaurantlist
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.view.View
+import android.text.format.DateFormat
+import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.afollestad.materialdialogs.MaterialDialog
-import mobile.setel.com.restaurantlist.model.RestaurantListData
 import mobile.setel.com.restaurantlist.adapter.AdapterRestaurantList
 import mobile.setel.com.restaurantlist.base.BaseActivity
 import mobile.setel.com.restaurantlist.base.recycler.AdapterAnimationHelper
 import mobile.setel.com.restaurantlist.contract.RestaurantListContract
-import mobile.setel.com.restaurantlist.model.RestaurantData
+import mobile.setel.com.restaurantlist.model.RestaurantListData
 import mobile.setel.com.restaurantlist.presenter.RestaurantPresenter
 import mobile.setel.com.restaurantlist.utils.Helpers
 import mobile.setel.com.restaurantlist.utils.PaginationScrollListener
+import java.util.*
 
 
 class MainActivity : BaseActivity(),
@@ -23,10 +25,7 @@ class MainActivity : BaseActivity(),
 
     private lateinit var adapter: AdapterRestaurantList
     private lateinit var recyclerView: RecyclerView
-    private lateinit var viewAdapter: RecyclerView.Adapter<*>
-    private lateinit var viewManager: RecyclerView.LayoutManager
-    private val mRestaurantList = RestaurantListData()
-    private val mRestaurantData = ArrayList<RestaurantData>()
+    private lateinit var tvCurrentDate: TextView
 
     private var isLoad = false
     private var isLast = false
@@ -55,7 +54,13 @@ class MainActivity : BaseActivity(),
     }
 
     override fun onSuccess(data: RestaurantListData) {
-        adapter = AdapterRestaurantList(this)
+        tvCurrentDate = findViewById(R.id.tv_current_date)
+        val cal: Calendar = Calendar.getInstance()
+        cal.setTimeInMillis(data.time!! * 1000L)
+        val date: String = DateFormat.format("EE, d MMM yyyy", cal).toString()
+        tvCurrentDate.text = date
+
+        adapter = AdapterRestaurantList(this, data.time!!)
         val linearLayoutManager = LinearLayoutManager(this@MainActivity)
         recyclerView = findViewById(R.id.rv_restaurant_list)
         recyclerView.apply {
@@ -113,5 +118,16 @@ class MainActivity : BaseActivity(),
 
     override fun showMessage(message: String) {
         Helpers.showAlert(this, message, true)
+    }
+
+    companion object {
+        /**
+         * Launch this activity.
+         * @param context the context
+         */
+        fun launchIntent(context: Context) {
+            val intent = Intent(context, MainActivity::class.java)
+            context.startActivity(intent)
+        }
     }
 }
