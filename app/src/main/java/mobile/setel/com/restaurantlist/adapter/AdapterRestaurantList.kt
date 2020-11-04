@@ -1,5 +1,6 @@
 package mobile.setel.com.restaurantlist.adapter
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,37 +9,56 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import mobile.setel.com.restaurantlist.R
+import mobile.setel.com.restaurantlist.base.recycler.CoreRecyclerAdapter
+import mobile.setel.com.restaurantlist.model.RestaurantData
 import mobile.setel.com.restaurantlist.model.RestaurantListData
 import net.cachapa.expandablelayout.ExpandableLayout
 
 
-class AdapterRestaurantList(private val mData: RestaurantListData,
-                            private val listener: ItemClicked)
-    : RecyclerView.Adapter<AdapterRestaurantList.ViewHolder>() {
+class AdapterRestaurantList(context: Context)
+    : CoreRecyclerAdapter<RestaurantData, AdapterRestaurantList.ViewHolder>(context) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AdapterRestaurantList.ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return ViewHolder(inflater.inflate(R.layout.item_restaurant_list, parent, false))
+        val inflater = LayoutInflater.from(context)
+        return if (viewType == ITEM) getViewHolder(parent, inflater)
+        else{
+            val v2 = inflater.inflate(R.layout.item_progress, parent, false)
+            LoadingVH(v2)
+        }
     }
 
-    override fun getItemCount(): Int {
-        return mData.restaurantList!!.size;
+    private inner class LoadingVH(itemView: View) : AdapterRestaurantList.ViewHolder(itemView)
+
+    private fun getViewHolder(parent: ViewGroup, inflater: LayoutInflater): AdapterRestaurantList.ViewHolder {
+        val v1 = inflater.inflate(R.layout.item_restaurant_list, parent, false)
+        return ViewHolder(v1)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bindView()
+    override fun getItemViewType(position: Int): Int {
+        return if (position == mData.size - 1 && isLoadingAdded) LOADING else ITEM
     }
 
-    // stores and recycles views as they are scrolled off screen
-    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
-        fun bindView() {
-            val data = mData.restaurantList!!.get(adapterPosition)
+    fun setContent(content: ArrayList<RestaurantData>) {
+        mData.clear()
+        mData.addAll(content)
+        notifyDataSetChanged()
+    }
+
+    override fun onBindViewHolder(holder: AdapterRestaurantList.ViewHolder, position: Int) {
+        if (getItemViewType(position) == ITEM){
+            (holder as ViewHolder).bindView(mData[position])
+            animateViewHolder(holder, holder.adapterPosition)
+        }
+    }
+
+    open inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
+        fun bindView(data: RestaurantData) {
+//            val mData = data.restaurantList!!.get(adapterPosition)
 
             val name = itemView.findViewById<TextView>(R.id.tv_restaurant_name)
             val status = itemView.findViewById<TextView>(R.id.tv_status)
             val hours = itemView.findViewById<TextView>(R.id.tv_operating_hours)
             val expandLayout = itemView.findViewById<ExpandableLayout>(R.id.expand_layout)
-            val ll = itemView.findViewById<LinearLayout>(R.id.ll)
             val icon = itemView.findViewById<ImageView>(R.id.ic_expand)
 
             name.text = data.restaurantName
@@ -55,14 +75,8 @@ class AdapterRestaurantList(private val mData: RestaurantListData,
                 } else {
 //                    icon.setImageResource(R.drawable.ic_arrow_top)
                     expandLayout.expand()
-
-                    data.isClicked = true
                 }
             }
         }
-    }
-
-    interface ItemClicked{
-        fun onItemClicked(name : String)
     }
 }

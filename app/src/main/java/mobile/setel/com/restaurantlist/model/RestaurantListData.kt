@@ -4,13 +4,13 @@ import com.google.gson.annotations.SerializedName
 
 class RestaurantListData() {
     @SerializedName("restaurants")
-    var restaurantList: List<RestaurantData>? = null
+    var restaurantList: ArrayList<RestaurantData>? = null
 
     @SerializedName("timestamp")
-    var timestamp: Int? = null
+    var time: Int? = null
 
-    constructor(restaurantList: List<RestaurantData>, timestamp: Int) : this() {
+    constructor(restaurantList: ArrayList<RestaurantData>, time: Int) : this() {
         this.restaurantList = restaurantList
-        this.timestamp = timestamp
+        this.time = time
     }
 }

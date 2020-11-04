@@ -2,59 +2,116 @@ package mobile.setel.com.restaurantlist
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.afollestad.materialdialogs.MaterialDialog
 import mobile.setel.com.restaurantlist.model.RestaurantListData
 import mobile.setel.com.restaurantlist.adapter.AdapterRestaurantList
+import mobile.setel.com.restaurantlist.base.BaseActivity
+import mobile.setel.com.restaurantlist.base.recycler.AdapterAnimationHelper
+import mobile.setel.com.restaurantlist.contract.RestaurantListContract
 import mobile.setel.com.restaurantlist.model.RestaurantData
+import mobile.setel.com.restaurantlist.presenter.RestaurantPresenter
+import mobile.setel.com.restaurantlist.utils.Helpers
+import mobile.setel.com.restaurantlist.utils.PaginationScrollListener
 
-class MainActivity : AppCompatActivity(), AdapterRestaurantList.ItemClicked {
 
+class MainActivity : BaseActivity(),
+    RestaurantListContract.View {
+
+    private lateinit var adapter: AdapterRestaurantList
     private lateinit var recyclerView: RecyclerView
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
     private val mRestaurantList = RestaurantListData()
     private val mRestaurantData = ArrayList<RestaurantData>()
 
+    private var isLoad = false
+    private var isLast = false
+    private val limitData = 10
+    private var currentPage = 1
+    private var totalPages = 0
+
+    private var presenter: RestaurantListContract.Presenter = RestaurantPresenter(this)
+    private var loading : MaterialDialog? = null
+
+    override val viewRes = R.layout.activity_main
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        initData()
+        presenter = RestaurantPresenter(this)
+        presenter.getRestaurantList()
+        loading = Helpers.getMaterialProgressDialog(this)
+    }
 
-        viewManager = LinearLayoutManager(this)
-        viewAdapter = AdapterRestaurantList(RestaurantListData(
-            mRestaurantData, 1604386422), this)
+    private fun resetData(){
+        isLoad = false
+        isLast = false
+        currentPage = 1
+        totalPages = 0
+    }
 
-        recyclerView = findViewById<RecyclerView>(R.id.rv_restaurant_list).apply {
-            // use this setting to improve performance if you know that changes
-            // in content do not change the layout size of the RecyclerView
+    override fun onSuccess(data: RestaurantListData) {
+        adapter = AdapterRestaurantList(this)
+        val linearLayoutManager = LinearLayoutManager(this@MainActivity)
+        recyclerView = findViewById(R.id.rv_restaurant_list)
+        recyclerView.apply {
+            layoutManager = linearLayoutManager
+            isNestedScrollingEnabled = false
             setHasFixedSize(true)
-
-            // use a linear layout manager
-            layoutManager = viewManager
-
-            // specify an viewAdapter (see also next example)
-            adapter = viewAdapter
         }
+        data.restaurantList?.let { adapter.setContent(it) }
+        if (data.restaurantList!!.size > 0 && data.restaurantList!!.size == limitData) {
+            adapter.addLoadingFooter()
+        }
+        else isLast = true
+        recyclerView.adapter = adapter
+        AdapterAnimationHelper().attachToRecyclerView(recyclerView)
+
+        recyclerView.addOnScrollListener(object : PaginationScrollListener(linearLayoutManager) {
+            override fun totalPageCount() = getTotalPage()
+
+            override fun isLastPage() = getIsLast()
+
+            override fun isLoading() = getIsLoad()
+
+            override fun loadMoreItems() {
+                isLoad = true
+                currentPage += 1
+
+                Handler().postDelayed({ presenter.getRestaurantList() }, 1000)
+            }
+        })
     }
 
-    private fun initData(){
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
-        mRestaurantData.add(RestaurantData("Bariuma Ramen",
-            "Open", "Mon-Sun 11:30 am - 9:00 pm"))
+    private fun getIsLoad(): Boolean{
+        return isLoad
     }
 
-    override fun onItemClicked(name: String) {
+    private fun getIsLast(): Boolean{
+        return isLast
+    }
 
+    private fun getTotalPage(): Int{
+        return totalPages
+    }
+
+    override fun onFailed(message: String) {
+        Helpers.showError(this, message)
+    }
+
+    override fun showLoading() {
+        loading?.show()
+    }
+
+    override fun dismissLoading() {
+        loading?.dismiss()
+    }
+
+    override fun showMessage(message: String) {
+        Helpers.showAlert(this, message, true)
     }
 }
